@@ -42,7 +42,7 @@ export default function Journal() {
           }
           
     }
-
+   
     return (
        <div>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4 p-4 border rounded-md w-full max-w-md">
