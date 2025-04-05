@@ -1,73 +1,102 @@
-'use client';
-import { useState } from "react";
-import { createClient } from "@/utils/supabase/client";
-import { useUser } from "@clerk/clerk-react";
+'use client'
 
-interface JournalEntry {
-    entryText: string;
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+
+// API route runs in the same file
+export const dynamic = 'force-dynamic'
+
+export default function JournalCareerPage() {
+  const [entry, setEntry] = useState('')
+  const [loading, setLoading] = useState(false)
+  interface ResultType {
+    summary: string;
     mood: string;
-    userID: string;
-    id:string;
-    created_at: string;
+    career_recommendation: string;
+    justification: string;
+    related_fields: string[];
   }
 
-const supabase = createClient(); // Initialize the Supabase client
+  const [result, setResult] = useState<ResultType | null>(null)
+  const [error, setError] = useState('')
 
-  
-export default function Journal() {
-    const { user } = useUser();
-    const [entryText, setEntryText] = useState<string>('');
-    const [mood, setMood] = useState<string>('');
-    const userID = user?.id || '';
-
-    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        
-        const newEntry: JournalEntry = {
-            entryText,
-            mood,
-            userID,
-            id:crypto.randomUUID(), // Generate a unique ID for the entry
-            created_at: new Date().toISOString(), // Set the current date and time
-          };
-
-          const { data, error } = await supabase
-          .from("Journal")
-          .insert([newEntry])
-          if (error) {
-            console.error('Error inserting entry:', error);
-          } else {
-            console.log('Entry inserted:', data);
-            console.log('Journal entry saved!');
-          }
-          
+  const handleSubmit = async () => {
+    setLoading(true)
+    setError('')
+    try {
+      console.log('Submitting entry:====>', entry);
+      const res = await fetch('/api/careerRecomdation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({  entry }),
+      })
+      const data = await res.json()
+      console.log('Response data in front :====>', data);
+      console.log("------------------------>",data.success)
+      if (data) {
+        const nested = data.summary.res.reply
+        setResult({
+          summary: data.summary.res.summary,
+          mood: nested.mood,
+          career_recommendation: nested.career_recommendation,
+          justification: nested.justification,
+          related_fields: nested.related_fields
+        });
+        console.log("inside here")
+        console.log("====> RESULT SET:", {
+          summary: data.summary.res.summary,
+          mood: nested.mood,
+          career_recommendation: nested.career_recommendation,
+          justification: nested.justification,
+          related_fields: nested.related_fields
+        });
+      }
+    } catch (error) {
+      setError('Failed to fetch recommendations.')
     }
-   
-    return (
-       <div>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4 p-4 border rounded-md w-full max-w-md">
-      <input
-        placeholder="Write your journal entry..."
-        value={entryText}
-        onChange={(e) => setEntryText(e.target.value)}
-        required
-        className="border p-2 rounded"
-      />
-      <input
-        type="text"
-        placeholder="Mood (e.g. happy, anxious)"
-        value={mood}
-        onChange={(e) => setMood(e.target.value)}
-        required
-        className="border p-2 rounded"
+    setLoading(false)
+  }
+
+  return (
+    <div className="max-w-3xl mx-auto p-6">
+      <h1 className="text-2xl font-bold mb-4">🧠 Journal to Career Recommendation</h1>
+      <textarea
+        value={entry}
+        onChange={(e) => setEntry(e.target.value)}
+        placeholder="Write your journal entry here..."
+        className="w-full h-40 p-3 border rounded mb-4"
       />
       <button
-        type="submit"
-        className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600 transition"
+        onClick={handleSubmit}
+        className="bg-blue-600 text-white px-4 py-2 rounded"
+        disabled={loading}
       >
-        Save Entry
+        {loading ? 'Analyzing...' : 'Get Career Advice'}
       </button>
-    </form>
-       </div>
-    )
+
+      {error && <p className="text-red-500 mt-4">{error}</p>}
+
+      
+  {result && (
+    <div className="mt-4 p-4 bg-gray-100 rounded-md">
+      <h2 className="text-xl font-semibold mb-2">Career Insight</h2>
+
+      <p><strong>Summary:</strong> {result.summary}</p>
+      <p><strong>Mood:</strong> {result.mood}</p>
+      <p><strong>Recommended Career:</strong> {result.career_recommendation}</p>
+      <p><strong>Justification:</strong> {result.justification}</p>
+      <p><strong>Related Fields:</strong></p>
+      <ul className="list-disc ml-5">
+        {result.related_fields.map((field: string, idx: number) => (
+          <li key={idx}>{field}</li>
+        ))}
+      </ul>
+    </div>
+  )}
+
+
+    </div>
+  )
 }
+
+// ---------------- BACKEND API ROUTE IN SAME FILE ---------------- //
