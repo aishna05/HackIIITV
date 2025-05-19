@@ -11,9 +11,9 @@ export async function POST(req: NextRequest) {
       },
       body: JSON.stringify(body)
     });
-
+   
     const result = await response.json();
-
+    console.log('Study plan result:', result);
     return NextResponse.json({ study_plan: result });
   } catch (error) {
     console.error('Error fetching study plan:', error);
